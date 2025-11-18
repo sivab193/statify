@@ -35,6 +35,9 @@ export function AuthContent() {
     }
 
     const redirectUri = `${window.location.origin}/api/auth/callback`
+    console.log('[v0] Redirect URI:', redirectUri)
+    console.log('[v0] Make sure this URL is added to your Spotify app settings at: https://developer.spotify.com/dashboard')
+    
     const scopes = [
       'user-read-private',
       'user-read-email',
