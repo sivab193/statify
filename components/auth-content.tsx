@@ -13,46 +13,22 @@ export function AuthContent() {
 
   useEffect(() => {
     const errorParam = searchParams.get('error')
-    if (errorParam) {
-      setError(
-        errorParam === 'access_denied' 
-          ? 'Access was denied. Please try again.' 
-          : 'Authentication failed. Please try again.'
-      )
+    if (!errorParam) return
+    const messages: Record<string, string> = {
+      access_denied: 'Access was denied. Please try again.',
+      state_mismatch: 'The sign-in request expired or was tampered with. Please try again.',
+      token_exchange_failed:
+        'Spotify rejected the sign-in. Check that the redirect URI is registered in the Spotify dashboard and try again.',
+      not_configured:
+        'Spotify credentials are not configured. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.',
     }
+    setError(messages[errorParam] ?? 'Authentication failed. Please try again.')
   }, [searchParams])
 
-  const handleSpotifyLogin = async () => {
+  const handleSpotifyLogin = () => {
     setIsConnecting(true)
     setError(null)
-    
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
-    
-    if (!clientId) {
-      setError('Spotify Client ID not configured. Please add it to environment variables.')
-      setIsConnecting(false)
-      return
-    }
-
-    const redirectUri = `${window.location.origin}/api/auth/callback`
-    console.log('[v0] Redirect URI:', redirectUri)
-    console.log('[v0] Make sure this URL is added to your Spotify app settings at: https://developer.spotify.com/dashboard')
-    
-    const scopes = [
-      'user-read-private',
-      'user-read-email',
-      'user-top-read',
-      'user-read-recently-played',
-    ].join(' ')
-
-    const authUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
-      client_id: clientId,
-      response_type: 'code',
-      redirect_uri: redirectUri,
-      scope: scopes,
-    })}`
-
-    window.location.href = authUrl
+    window.location.href = '/api/auth/login'
   }
 
   return (

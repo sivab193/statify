@@ -1,57 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAccessToken } from '@/lib/spotify'
+import { exchangeCode } from '@/lib/spotify'
+import {
+  COOKIE_AUTH_STATE,
+  COOKIE_PKCE_VERIFIER,
+  resolveOrigin,
+  setTokenCookies,
+} from '@/lib/session'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const state = searchParams.get('state')
 
-  console.log('[v0] Callback received:', { code: !!code, error })
+  // request.url's host is normalized to the bind hostname; use the real
+  // origin so browser-facing redirects stay on the host the user is on
+  const origin = resolveOrigin(request)
 
-  if (error) {
-    return NextResponse.redirect(new URL('/auth?error=access_denied', request.url))
+  const fail = (reason: string) => {
+    const response = NextResponse.redirect(new URL(`/auth?error=${reason}`, origin))
+    response.cookies.delete(COOKIE_AUTH_STATE)
+    response.cookies.delete(COOKIE_PKCE_VERIFIER)
+    return response
   }
 
-  if (!code) {
-    return NextResponse.redirect(new URL('/auth?error=no_code', request.url))
+  if (error) return fail('access_denied')
+  if (!code) return fail('no_code')
+
+  const expectedState = request.cookies.get(COOKIE_AUTH_STATE)?.value
+  const codeVerifier = request.cookies.get(COOKIE_PKCE_VERIFIER)?.value
+  if (!expectedState || !codeVerifier || state !== expectedState) {
+    return fail('state_mismatch')
   }
 
   try {
-    const data = await getAccessToken(code)
-    
-    console.log('[v0] Token exchange successful:', { 
-      hasAccessToken: !!data.access_token, 
-      hasRefreshToken: !!data.refresh_token,
-      expiresIn: data.expires_in 
-    })
+    const tokens = await exchangeCode(code, `${origin}/api/auth/callback`, codeVerifier)
 
-    // Store tokens in cookies
-    const response = NextResponse.redirect(new URL('/dashboard', request.url))
-    
-    const isProduction = process.env.NODE_ENV === 'production'
-    
-    // Set access token (expires in 1 hour)
-    response.cookies.set('spotify_access_token', data.access_token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: data.expires_in,
-      path: '/',
-    })
+    if (!tokens.refresh_token) return fail('token_exchange_failed')
 
-    // Set refresh token (long-lived)
-    response.cookies.set('spotify_refresh_token', data.refresh_token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      path: '/',
-    })
-
-    console.log('[v0] Cookies set, redirecting to dashboard')
+    const response = NextResponse.redirect(new URL('/dashboard', origin))
+    response.cookies.delete(COOKIE_AUTH_STATE)
+    response.cookies.delete(COOKIE_PKCE_VERIFIER)
+    setTokenCookies(response.cookies, tokens)
     return response
-  } catch (error) {
-    console.error('[v0] Error exchanging code for token:', error)
-    return NextResponse.redirect(new URL('/auth?error=token_exchange_failed', request.url))
+  } catch (err) {
+    console.error('Spotify token exchange failed:', err)
+    return fail('token_exchange_failed')
   }
 }
