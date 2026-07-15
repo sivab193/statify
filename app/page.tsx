@@ -82,9 +82,16 @@ export default function HomePage() {
           <UsageStats />
         </div>
 
-        <p className="relative z-10 mt-10 text-xs text-muted-foreground">
-          Read-only access · your data never leaves your session
-        </p>
+        <footer className="relative z-10 mt-16 pb-8 text-center text-xs text-muted-foreground space-y-3">
+          <p>Read-only access &middot; your data never leaves your session</p>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 flex items-center justify-center gap-2">
+            <span>Build</span>
+            <span className="text-primary text-xs">•</span>
+            <span>Automate</span>
+            <span className="text-primary text-xs">•</span>
+            <span>Open Source</span>
+          </p>
+        </footer>
       </div>
     </div>
   )

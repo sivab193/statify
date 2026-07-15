@@ -125,7 +125,7 @@ function brandFooter(ctx: CanvasRenderingContext2D, h: number) {
   ctx.textAlign = 'right'
   ctx.font = `600 26px ${FONT}`
   ctx.fillStyle = MUTED
-  ctx.fillText('s19.vercel.app', W - 48, h - 52)
+  ctx.fillText('sst.siv19.dev', W - 48, h - 52)
   ctx.textAlign = 'left'
 }
 

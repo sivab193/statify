@@ -5,7 +5,7 @@ top artists as orbiting planets, a cover-flow **Album Wall**, and insight cards 
 never shows you — plus an **in-browser data-export mode** that computes your all-time
 recap with no login at all.
 
-**Live at [s19.vercel.app](https://s19.vercel.app)** · try it without an account at `/demo`.
+**Live at [sst.siv19.dev](https://sst.siv19.dev)** · try it without an account at `/demo`.
 
 ## Two ways in
 
@@ -43,10 +43,10 @@ This is richer than the API exposes (all-time, every play), and every stat is sh
 ## Setup
 
 1. Create an app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and register **both** redirect URIs:
-   - `https://s19.vercel.app/api/auth/callback` (production)
+   - `https://sst.siv19.dev/api/auth/callback` (production)
    - `http://127.0.0.1:3000/api/auth/callback` (local dev — Spotify rejects `localhost`, so develop at `http://127.0.0.1:3000`)
 2. Copy `.env.example` to `.env.local` and fill in `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`.
-   In production also set `APP_URL=https://s19.vercel.app`.
+   In production also set `APP_URL=https://sst.siv19.dev`.
 3. ```bash
    pnpm install
    pnpm dev

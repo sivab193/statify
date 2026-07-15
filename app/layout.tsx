@@ -7,7 +7,7 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://s19.vercel.app'),
+  metadataBase: new URL('https://sst.siv19.dev'),
   title: 'Statify — Your Spotify, Visualized',
   description:
     'Explore your Spotify listening in 3D: genre galaxies, era maps, listening clocks, and insights Spotify never shows you. Or upload your data export for an all-time recap — no login required.',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: 'Statify — Your Spotify, Visualized',
     description:
       'Your Spotify listening in 3D — genre galaxies, listening clocks, and a shareable all-time recap from your data export. No login required.',
-    url: 'https://s19.vercel.app',
+    url: 'https://sst.siv19.dev',
     siteName: 'Statify',
     type: 'website',
   },
