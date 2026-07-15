@@ -2,7 +2,8 @@
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Music2, Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
+import { LogoMark } from '@/components/brand/logo'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 
@@ -35,9 +36,7 @@ export function AuthContent() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="max-w-md w-full p-8 space-y-6">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Music2 className="w-8 h-8 text-primary" />
-          </div>
+          <LogoMark className="w-16 h-16 rounded-[26%] shadow-lg shadow-primary/25" />
           
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold text-card-foreground">Connect Your Spotify</h1>

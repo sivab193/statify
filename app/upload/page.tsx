@@ -8,7 +8,8 @@ import { LocalStatsView } from '@/components/upload/local-stats-view'
 import { FilterBar } from '@/components/upload/filter-bar'
 import { aggregate } from '@/lib/streaming-history/aggregate'
 import { ALL_FILTERS, type ParseMeta, type Play, type PlayFilters } from '@/lib/streaming-history/types'
-import { ArrowLeft, Music2, Clock, Sparkles } from 'lucide-react'
+import { ArrowLeft, Clock, Sparkles } from 'lucide-react'
+import { LogoMark } from '@/components/brand/logo'
 
 function scopeLabelFor(filters: PlayFilters, meta: ParseMeta): string {
   if (filters.years && filters.years.length) {
@@ -54,9 +55,7 @@ export default function UploadPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-xl space-y-10">
         <div className="space-y-4 text-center">
-          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Music2 className="h-7 w-7 text-primary" />
-          </div>
+          <LogoMark className="mx-auto h-14 w-14 rounded-[26%] shadow-lg shadow-primary/25" />
           <h1 className="text-balance text-4xl font-bold tracking-tight">
             Your stats, <span className="text-primary">no login</span>
           </h1>
@@ -67,7 +66,18 @@ export default function UploadPage() {
           </p>
         </div>
 
-        <UploadDropzone onReady={(plays, meta) => setData({ plays, meta })} />
+        <UploadDropzone
+          onReady={(plays, meta) => {
+            setData({ plays, meta })
+            // Count a successful upload (no-ops without a KV store)
+            fetch('/api/stats', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event: 'upload' }),
+              keepalive: true,
+            }).catch(() => {})
+          }}
+        />
 
         {/* How to get your data */}
         <div className="mx-auto max-w-lg space-y-4 rounded-xl border border-border bg-card/50 p-5">

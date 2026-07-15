@@ -1,0 +1,14 @@
+{
+  "name": "Statify — Your Spotify, Visualized",
+  "short_name": "Statify",
+  "description": "Explore your Spotify listening in 3D and share an all-time recap from your data export.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f0d",
+  "theme_color": "#1db954",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon.svg", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

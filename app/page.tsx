@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button'
-import { Music2, Orbit, Radar, Clock3 } from 'lucide-react'
+import { Orbit, Radar, Clock3 } from 'lucide-react'
 import Link from 'next/link'
 import { LazyHeroScene } from '@/components/three/lazy'
+import { LogoMark } from '@/components/brand/logo'
+import { UsageStats } from '@/components/usage-stats'
 
 const FEATURES = [
   {
@@ -32,9 +34,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 pointer-events-none">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 backdrop-blur animate-scale-in">
-            <Music2 className="w-8 h-8 text-primary" />
-          </div>
+          <LogoMark className="w-16 h-16 rounded-[26%] shadow-xl shadow-primary/30 animate-scale-in" />
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance animate-fade-slide-up">
             Your Spotify, <span className="text-primary">in 3D</span>
@@ -78,7 +78,11 @@ export default function HomePage() {
           ))}
         </div>
 
-        <p className="relative z-10 mt-14 text-xs text-muted-foreground">
+        <div className="relative z-10 mt-16 animate-fade-slide-up" style={{ animationDelay: '0.6s' }}>
+          <UsageStats />
+        </div>
+
+        <p className="relative z-10 mt-10 text-xs text-muted-foreground">
           Read-only access · your data never leaves your session
         </p>
       </div>

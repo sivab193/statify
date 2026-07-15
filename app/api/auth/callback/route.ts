@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode } from '@/lib/spotify'
+import { incr } from '@/lib/counter'
 import {
   COOKIE_AUTH_STATE,
   COOKIE_PKCE_VERIFIER,
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeCode(code, `${origin}/api/auth/callback`, codeVerifier)
 
     if (!tokens.refresh_token) return fail('token_exchange_failed')
+
+    // Count a successful Spotify connection (no-ops without a KV store)
+    incr('connected').catch(() => {})
 
     const response = NextResponse.redirect(new URL('/dashboard', origin))
     response.cookies.delete(COOKIE_AUTH_STATE)
