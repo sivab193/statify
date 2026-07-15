@@ -3,14 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { UploadCloud, ShieldCheck, Loader2, AlertCircle } from 'lucide-react'
-import type { LocalStats, WorkerResponse } from '@/lib/streaming-history/types'
+import type { ParseMeta, Play, WorkerResponse } from '@/lib/streaming-history/types'
 
 type Phase =
   | { status: 'idle' }
   | { status: 'working'; stage: string; percent: number }
   | { status: 'error'; message: string }
 
-export function UploadDropzone({ onReady }: { onReady: (stats: LocalStats) => void }) {
+export function UploadDropzone({
+  onReady,
+}: {
+  onReady: (plays: Play[], meta: ParseMeta) => void
+}) {
   const [phase, setPhase] = useState<Phase>({ status: 'idle' })
   const [dragging, setDragging] = useState(false)
   const workerRef = useRef<Worker | null>(null)
@@ -48,7 +52,7 @@ export function UploadDropzone({ onReady }: { onReady: (stats: LocalStats) => vo
           } else if (msg.type === 'done') {
             setPhase({ status: 'idle' })
             worker.terminate()
-            onReady(msg.stats)
+            onReady(msg.plays, msg.meta)
           } else {
             setPhase({ status: 'error', message: msg.message })
             worker.terminate()

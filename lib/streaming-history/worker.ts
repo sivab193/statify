@@ -1,9 +1,10 @@
 /// <reference lib="webworker" />
 // Runs off the main thread: unzips the Spotify export, parses the audio
-// history JSON, and aggregates it. Nothing here touches the network — the
-// user's data never leaves the browser.
+// history JSON, and normalizes it into compact plays. Nothing here touches the
+// network — the user's data never leaves the browser. Aggregation happens on
+// the main thread so filter changes recompute instantly.
 import { unzipSync, strFromU8 } from 'fflate'
-import { aggregate } from './aggregate'
+import { normalize } from './aggregate'
 import type { RawPlay, WorkerRequest, WorkerResponse } from './types'
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope
@@ -28,7 +29,7 @@ ctx.onmessage = (event: MessageEvent<WorkerRequest>) => {
       if (file.name.toLowerCase().endsWith('.zip')) {
         post({ type: 'progress', stage: 'Unzipping export…', percent: 10 })
         const entries = unzipSync(bytes, { filter: (f) => isAudioHistory(f.name) })
-        for (const [name, data] of Object.entries(entries)) {
+        for (const [, data] of Object.entries(entries)) {
           if (data.length) jsonBlobs.push(strFromU8(data))
         }
       } else if (isAudioHistory(file.name)) {
@@ -57,14 +58,15 @@ ctx.onmessage = (event: MessageEvent<WorkerRequest>) => {
       if (Array.isArray(parsed)) rows.push(...(parsed as RawPlay[]))
     }
 
-    if (rows.length === 0) {
-      post({ type: 'error', message: 'The history files were empty — no plays to analyze.' })
+    post({ type: 'progress', stage: 'Crunching numbers…', percent: 85 })
+    const { plays, meta } = normalize(rows)
+
+    if (plays.length === 0) {
+      post({ type: 'error', message: 'No music plays found in that export.' })
       return
     }
 
-    post({ type: 'progress', stage: 'Crunching numbers…', percent: 85 })
-    const stats = aggregate(rows)
-    post({ type: 'done', stats })
+    post({ type: 'done', plays, meta })
   } catch (err) {
     post({
       type: 'error',
