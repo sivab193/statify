@@ -27,5 +27,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# personal Spotify data exports — never commit real listening history
+/my_spotify_data.zip
+/Spotify Extended Streaming History/
+*_spotify_data.zip
+
 # typescript
 *.tsbuildinfo

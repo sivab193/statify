@@ -1,0 +1,148 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { UploadCloud, ShieldCheck, Loader2, AlertCircle } from 'lucide-react'
+import type { LocalStats, WorkerResponse } from '@/lib/streaming-history/types'
+
+type Phase =
+  | { status: 'idle' }
+  | { status: 'working'; stage: string; percent: number }
+  | { status: 'error'; message: string }
+
+export function UploadDropzone({ onReady }: { onReady: (stats: LocalStats) => void }) {
+  const [phase, setPhase] = useState<Phase>({ status: 'idle' })
+  const [dragging, setDragging] = useState(false)
+  const workerRef = useRef<Worker | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => () => workerRef.current?.terminate(), [])
+
+  const process = useCallback(
+    async (fileList: FileList | null) => {
+      if (!fileList || fileList.length === 0) return
+      const accepted = Array.from(fileList).filter(
+        (f) => f.name.toLowerCase().endsWith('.zip') || f.name.toLowerCase().endsWith('.json'),
+      )
+      if (accepted.length === 0) {
+        setPhase({ status: 'error', message: 'Please choose the Spotify .zip or its .json files.' })
+        return
+      }
+
+      setPhase({ status: 'working', stage: 'Reading files…', percent: 5 })
+      try {
+        const files = await Promise.all(
+          accepted.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })),
+        )
+
+        workerRef.current?.terminate()
+        const worker = new Worker(new URL('../../lib/streaming-history/worker.ts', import.meta.url), {
+          type: 'module',
+        })
+        workerRef.current = worker
+
+        worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+          const msg = event.data
+          if (msg.type === 'progress') {
+            setPhase({ status: 'working', stage: msg.stage, percent: msg.percent })
+          } else if (msg.type === 'done') {
+            setPhase({ status: 'idle' })
+            worker.terminate()
+            onReady(msg.stats)
+          } else {
+            setPhase({ status: 'error', message: msg.message })
+            worker.terminate()
+          }
+        }
+        worker.onerror = () => {
+          setPhase({ status: 'error', message: 'Something went wrong reading that file.' })
+        }
+
+        worker.postMessage(
+          { files },
+          files.map((f) => f.buffer),
+        )
+      } catch {
+        setPhase({ status: 'error', message: 'Could not read that file.' })
+      }
+    },
+    [onReady],
+  )
+
+  const working = phase.status === 'working'
+
+  return (
+    <div className="w-full max-w-xl mx-auto space-y-4">
+      <label
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragging(false)
+          if (!working) process(e.dataTransfer.files)
+        }}
+        className={`group flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+          dragging
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:border-primary/60 hover:bg-card/60'
+        } ${working ? 'pointer-events-none opacity-70' : 'cursor-pointer'}`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".zip,.json,application/zip,application/json"
+          multiple
+          className="sr-only"
+          disabled={working}
+          onChange={(e) => process(e.target.files)}
+        />
+
+        {working ? (
+          <>
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="space-y-2 w-full max-w-xs">
+              <p className="text-sm font-medium">{phase.stage}</p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${phase.percent}%` }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-105">
+              <UploadCloud className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-semibold">Drop your Spotify data here</p>
+              <p className="text-sm text-muted-foreground">
+                The <span className="font-mono text-xs">my_spotify_data.zip</span> from your account
+                export — or the JSON files inside it
+              </p>
+            </div>
+            <Button type="button" size="lg" onClick={() => inputRef.current?.click()}>
+              Choose file
+            </Button>
+          </>
+        )}
+      </label>
+
+      {phase.status === 'error' && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{phase.message}</span>
+        </div>
+      )}
+
+      <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+        <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+        Parsed entirely in your browser — nothing is uploaded to any server.
+      </p>
+    </div>
+  )
+}

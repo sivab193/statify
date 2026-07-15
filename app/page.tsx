@@ -58,6 +58,9 @@ export default function HomePage() {
             <Button asChild size="lg" variant="outline" className="text-lg px-8 h-14 font-semibold">
               <Link href="/demo">Try the Demo</Link>
             </Button>
+            <Button asChild size="lg" variant="ghost" className="text-lg px-8 h-14 font-semibold">
+              <Link href="/upload">Upload your data</Link>
+            </Button>
           </div>
         </div>
 
