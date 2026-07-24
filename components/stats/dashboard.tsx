@@ -90,11 +90,12 @@ function Hero({ stats, onReset }: { stats: UnifiedStats; onReset: (() => void) |
 }
 
 /**
- * The API only returns ranked top-50 lists plus the last 50 plays — no
- * durations, no history. Half the cards below simply can't render from it, so
- * say what the export adds rather than leaving connect mode looking thin.
+ * Both the API and the basic "Account data" export leave cards unrenderable —
+ * the API has no play history, the basic export has no album/device/shuffle
+ * fields. Rather than let those sections silently vanish, say what's missing
+ * and point at the extended streaming history, which fills every one of them.
  */
-function ExportUpsell() {
+function ExportUpsell({ intro, missing }: { intro: string; missing: string[] }) {
   return (
     <Card className="gap-4 border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card p-6">
       <div className="flex items-start gap-3">
@@ -103,16 +104,12 @@ function ExportUpsell() {
         </div>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Want the full picture?</h2>
-          <p className="text-sm text-muted-foreground">
-            Spotify&rsquo;s API only hands out your top lists and last 50 plays, so some stats
-            can&rsquo;t be worked out here. Your data export carries every play you&rsquo;ve ever
-            made — drop the ZIP in and you also get:
-          </p>
+          <p className="text-sm text-muted-foreground">{intro}</p>
         </div>
       </div>
 
       <ul className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-        {EXPORT_ONLY.map((item) => (
+        {missing.map((item) => (
           <li key={item} className="flex items-start gap-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             {item}
@@ -123,7 +120,7 @@ function ExportUpsell() {
       <div className="flex flex-wrap items-center gap-3 pt-1">
         <Button asChild className="rounded-full">
           <Link href="/upload">
-            <Upload className="h-4 w-4" /> Upload my export
+            <Upload className="h-4 w-4" /> How to get it
           </Link>
         </Button>
         <p className="text-xs text-muted-foreground">
@@ -134,13 +131,28 @@ function ExportUpsell() {
   )
 }
 
-const EXPORT_ONLY = [
+const CONNECT_INTRO =
+  'Spotify’s API only hands out your top lists and last 50 plays, so some stats can’t be worked out here. The extended streaming history export carries every play you’ve ever made — upload it and you also get:'
+
+const CONNECT_MISSING = [
   'Total hours and plays, all time',
   'Skip rate, shuffle rate and weekday vs. weekend',
   'Longest day streak and your record listening day',
   'Year-by-year and month-by-month history',
   'Your #1 artist for every single year',
   'Which devices and countries you listened from',
+]
+
+const BASIC_INTRO =
+  'This is the basic “Account data” export — it covers roughly the past year and records only the time, artist and track of each play. The “Extended streaming history” export goes back to your very first play and adds:'
+
+const BASIC_MISSING = [
+  'Your full history, not just the last ~12 months',
+  'Top albums, and the album behind every track',
+  'Which devices and countries you listened from',
+  'Real shuffle and skip flags, not just short plays',
+  'Links straight through to each track on Spotify',
+  'Year-by-year taste evolution and loyalty',
 ]
 
 export function StatsDashboard() {
@@ -196,16 +208,19 @@ export function StatsDashboard() {
         {can3D && <LazyAlbumWall />}
 
         {/* Charts */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* The basic export has no album field, so that column drops out */}
+        <div className={`grid gap-6 ${stats.albums.length ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
           <Reveal className="h-full">
             <TopArtistsCard stats={stats} />
           </Reveal>
           <Reveal delay={0.05} className="h-full">
             <TopTracksCard stats={stats} />
           </Reveal>
-          <Reveal delay={0.1} className="h-full">
-            <TopAlbumsCard stats={stats} />
-          </Reveal>
+          {stats.albums.length > 0 && (
+            <Reveal delay={0.1} className="h-full">
+              <TopAlbumsCard stats={stats} />
+            </Reveal>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -342,10 +357,16 @@ export function StatsDashboard() {
           </div>
         )}
 
-        {stats.source !== 'upload' && (
+        {stats.source !== 'upload' ? (
           <Reveal>
-            <ExportUpsell />
+            <ExportUpsell intro={CONNECT_INTRO} missing={CONNECT_MISSING} />
           </Reveal>
+        ) : (
+          stats.basicExport && (
+            <Reveal>
+              <ExportUpsell intro={BASIC_INTRO} missing={BASIC_MISSING} />
+            </Reveal>
+          )
         )}
 
         <p className="pt-4 text-center text-xs text-muted-foreground">{stats.footnote}</p>

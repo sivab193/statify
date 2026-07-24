@@ -219,6 +219,8 @@ export interface UnifiedStats {
   scopeLabel: string
   hero: HeroData
   tiles: TileData[]
+  /** Upload path only: the plays came from the basic export, not the extended one */
+  basicExport?: boolean
   recap: RecapData
   highlights: HighlightData[]
   artists: UnifiedArtist[]

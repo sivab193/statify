@@ -159,8 +159,8 @@ export function LocalStatsProvider({
   }, [])
 
   const stats = useMemo(
-    () => fromLocalStats(aggregate(plays, filters), scopeLabelFor(filters)),
-    [plays, filters],
+    () => fromLocalStats(aggregate(plays, filters), scopeLabelFor(filters), meta.format),
+    [plays, filters, meta.format],
   )
 
   const value = useMemo<StatsContextValue>(

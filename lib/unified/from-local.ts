@@ -12,7 +12,7 @@ import {
   plural,
   WEEKDAY_LABELS,
 } from '@/lib/format'
-import type { LocalStats } from '@/lib/streaming-history/types'
+import type { HistoryFormat, LocalStats } from '@/lib/streaming-history/types'
 import type {
   EvolutionColumn,
   EvolutionEntry,
@@ -52,11 +52,39 @@ function repeatPersona(rate: number): string {
   return 'Serial Explorer'
 }
 
-function buildTiles(stats: LocalStats): TileData[] {
+function buildTiles(stats: LocalStats, format: HistoryFormat): TileData[] {
   const weekendShare =
     stats.weekdayMinutes + stats.weekendMinutes
       ? stats.weekendMinutes / (stats.weekdayMinutes + stats.weekendMinutes)
       : 0
+
+  // The basic export records no shuffle flag, so that slot shows repeat rate —
+  // derivable from plays vs. distinct tracks — to keep the grid at eight.
+  const repeatRate = stats.totalPlays
+    ? Math.round((1 - stats.distinctTracks / stats.totalPlays) * 100)
+    : 0
+  const shuffleOrRepeat: TileData =
+    format === 'basic'
+      ? {
+          key: 'repeat',
+          icon: 'shuffle',
+          label: 'Repeat rate',
+          value: `${repeatRate}%`,
+          countTo: null,
+          decimals: 0,
+          suffix: '',
+          hint: 'of plays were repeats',
+        }
+      : {
+          key: 'shuffle',
+          icon: 'shuffle',
+          label: 'Shuffle',
+          value: formatPercent(stats.shuffleRate),
+          countTo: null,
+          decimals: 0,
+          suffix: '',
+          hint: 'plays on shuffle',
+        }
 
   return [
     {
@@ -109,16 +137,7 @@ function buildTiles(stats: LocalStats): TileData[] {
       suffix: '',
       hint: 'under 30s or skipped',
     },
-    {
-      key: 'shuffle',
-      icon: 'shuffle',
-      label: 'Shuffle',
-      value: formatPercent(stats.shuffleRate),
-      countTo: null,
-      decimals: 0,
-      suffix: '',
-      hint: 'plays on shuffle',
-    },
+    shuffleOrRepeat,
     {
       key: 'peak',
       icon: 'clock',
@@ -278,7 +297,12 @@ function buildEvolution(stats: LocalStats): UnifiedStats['evolution'] {
   }
 }
 
-export function fromLocalStats(stats: LocalStats, scopeLabel: string): UnifiedStats {
+export function fromLocalStats(
+  stats: LocalStats,
+  scopeLabel: string,
+  format: HistoryFormat = 'extended',
+): UnifiedStats {
+  const isBasic = format === 'basic'
   const eras = eraClusters(stats)
   const totalMinutes = stats.totalMs / 60_000
 
@@ -327,7 +351,8 @@ export function fromLocalStats(stats: LocalStats, scopeLabel: string): UnifiedSt
           : `${formatNumber(stats.totalPlays)} plays`,
     },
 
-    tiles: buildTiles(stats),
+    tiles: buildTiles(stats, format),
+    basicExport: isBasic,
     recap: buildRecap(stats),
     highlights: buildHighlights(stats),
     artists,
@@ -347,16 +372,20 @@ export function fromLocalStats(stats: LocalStats, scopeLabel: string): UnifiedSt
       detail: `${t.artist} · ${formatNumber(t.plays)} plays`,
     })),
 
-    albums: stats.topAlbums.map((a, i) => ({
-      key: `${a.name}|${a.artist}`,
-      name: a.name,
-      artist: a.artist,
-      imageUrl: null,
-      url: null,
-      rank: i + 1,
-      value: formatMinutes(a.ms / 60_000),
-      detail: a.artist,
-    })),
+    // The basic export has no album field, so every row would collapse into one
+    // nameless album — better to drop the section entirely.
+    albums: isBasic
+      ? []
+      : stats.topAlbums.map((a, i) => ({
+          key: `${a.name}|${a.artist}`,
+          name: a.name,
+          artist: a.artist,
+          imageUrl: null,
+          url: null,
+          rank: i + 1,
+          value: formatMinutes(a.ms / 60_000),
+          detail: a.artist,
+        })),
 
     clusterLabel: 'the year you found them',
 
@@ -473,6 +502,8 @@ export function fromLocalStats(stats: LocalStats, scopeLabel: string): UnifiedSt
       })),
     },
 
-    footnote: 'Computed locally from your export · nothing left your browser.',
+    footnote: isBasic
+      ? 'Computed locally from your account-data export · nothing left your browser.'
+      : 'Computed locally from your export · nothing left your browser.',
   }
 }

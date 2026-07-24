@@ -6,12 +6,14 @@ import type {
   AlbumAgg,
   ArtistAgg,
   ArtistYear,
+  HistoryFormat,
   HourBin,
   LabelledAgg,
   LocalStats,
   ParseMeta,
   Play,
   PlayFilters,
+  RawBasicPlay,
   RawPlay,
   RideOrDie,
   TrackAgg,
@@ -51,43 +53,86 @@ function prettyPlatform(raw: string | null): string {
 
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
 
+/** The date/time fields every play carries, derived once from its timestamp. */
+function stamp(date: Date) {
+  const year = date.getFullYear()
+  return {
+    t: date.getTime(),
+    year,
+    month: `${year}-${pad(date.getMonth() + 1)}`,
+    day: `${year}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    hour: date.getHours(),
+    dow: date.getDay(),
+  }
+}
+
+function fromExtendedRow(row: RawPlay): Play | null {
+  if (!row.spotify_track_uri) return null // podcast / audiobook rows
+  const ms = row.ms_played ?? 0
+  if (ms <= 0) return null
+  const date = new Date(row.ts)
+  if (!Number.isFinite(date.getTime())) return null
+
+  return {
+    ...stamp(date),
+    ms,
+    uri: row.spotify_track_uri,
+    track: row.master_metadata_track_name ?? 'Unknown Track',
+    artist: row.master_metadata_album_artist_name ?? 'Unknown Artist',
+    album: row.master_metadata_album_album_name ?? '',
+    platform: prettyPlatform(row.platform),
+    country: row.conn_country ?? 'Unknown',
+    skip: row.skipped === true || ms < SKIP_MS,
+    shuffle: row.shuffle === true,
+    offline: row.offline === true,
+  }
+}
+
+function fromBasicRow(row: RawBasicPlay): Play | null {
+  const ms = row.msPlayed ?? 0
+  if (ms <= 0 || !row.trackName) return null
+  // "2025-05-07 09:21" is UTC but isn't ISO, so browsers would read it as local
+  // time. Pin it to UTC, then the local getters below match the extended path.
+  const date = new Date(`${row.endTime.replace(' ', 'T')}:00Z`)
+  if (!Number.isFinite(date.getTime())) return null
+
+  const artist = row.artistName ?? 'Unknown Artist'
+  return {
+    ...stamp(date),
+    ms,
+    // No track URI in this export — artist + title is the only stable identity.
+    uri: `basic:${artist}|${row.trackName}`,
+    track: row.trackName,
+    artist,
+    // Album, device, country and the shuffle flag simply aren't recorded here.
+    album: '',
+    platform: '',
+    country: '',
+    skip: ms < SKIP_MS,
+    shuffle: false,
+    offline: false,
+  }
+}
+
 /** Raw rows → compact plays (music only) + filter metadata. */
-export function normalize(rows: RawPlay[]): { plays: Play[]; meta: ParseMeta } {
+export function normalize(
+  rows: RawPlay[] | RawBasicPlay[],
+  format: HistoryFormat = 'extended',
+): { plays: Play[]; meta: ParseMeta } {
   const plays: Play[] = []
   const years = new Set<number>()
   const platforms = new Set<string>()
 
   for (const row of rows) {
-    if (!row.spotify_track_uri) continue // podcast / audiobook rows
-    const ms = row.ms_played ?? 0
-    if (ms <= 0) continue
-    const date = new Date(row.ts)
-    const t = date.getTime()
-    if (!Number.isFinite(t)) continue
+    const play =
+      format === 'basic'
+        ? fromBasicRow(row as RawBasicPlay)
+        : fromExtendedRow(row as RawPlay)
+    if (!play) continue
 
-    const year = date.getFullYear()
-    const platform = prettyPlatform(row.platform)
-    years.add(year)
-    platforms.add(platform)
-
-    plays.push({
-      t,
-      year,
-      month: `${year}-${pad(date.getMonth() + 1)}`,
-      day: `${year}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-      hour: date.getHours(),
-      dow: date.getDay(),
-      ms,
-      uri: row.spotify_track_uri,
-      track: row.master_metadata_track_name ?? 'Unknown Track',
-      artist: row.master_metadata_album_artist_name ?? 'Unknown Artist',
-      album: row.master_metadata_album_album_name ?? '',
-      platform,
-      country: row.conn_country ?? 'Unknown',
-      skip: row.skipped === true || ms < SKIP_MS,
-      shuffle: row.shuffle === true,
-      offline: row.offline === true,
-    })
+    years.add(play.year)
+    if (play.platform) platforms.add(play.platform)
+    plays.push(play)
   }
 
   // Chronological once, here, so every later pass (sessions, streaks) can
@@ -100,6 +145,7 @@ export function normalize(rows: RawPlay[]): { plays: Play[]; meta: ParseMeta } {
       years: [...years].sort((a, b) => a - b),
       platforms: [...platforms].sort(),
       totalPlays: plays.length,
+      format,
     },
   }
 }

@@ -80,9 +80,10 @@ export function FilterBar({
           </Pill>
         ))}
 
-        <span className="mx-1 h-5 w-px bg-border" />
+        {/* The basic export records no device, so there's nothing to filter by */}
+        {meta.platforms.length > 0 && <span className="mx-1 h-5 w-px bg-border" />}
 
-        <div className="relative">
+        <div className={`relative ${meta.platforms.length ? '' : 'hidden'}`}>
           <Pill active={filters.platforms !== null} onClick={() => setShowPlatforms((s) => !s)}>
             {platformLabel}
           </Pill>

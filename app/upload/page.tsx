@@ -79,10 +79,11 @@ export default function UploadPage() {
             <li className="flex gap-3">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">2</span>
               <span>
-                Tick <span className="font-medium text-foreground">Extended streaming history</span>{' '}
-                (not the basic “Account data” box — that one lacks the full history), then click{' '}
-                <span className="font-medium text-foreground">Request data</span> and confirm via the
-                email Spotify sends.
+                Tick <span className="font-medium text-foreground">Extended streaming history</span>,
+                then click <span className="font-medium text-foreground">Request data</span> and
+                confirm via the email Spotify sends. The basic{' '}
+                <span className="font-medium text-foreground">Account data</span> box works too, but
+                it only covers about a year and leaves out albums, devices and shuffle.
               </span>
             </li>
             <li className="flex gap-3">

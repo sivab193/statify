@@ -3,7 +3,15 @@
 // compact per-play shape we keep in memory for re-filtering, and the
 // aggregated stats we compute from them entirely in the browser.
 
-/** One row from a Streaming_History_Audio_*.json file. */
+/**
+ * Which of Spotify's two exports the plays came from. "Extended streaming
+ * history" carries every play ever with full context; the basic "Account data"
+ * box carries roughly a year with only four fields per row, so the sections
+ * that need album, device, country or shuffle can't be built from it.
+ */
+export type HistoryFormat = 'extended' | 'basic'
+
+/** One row from a Streaming_History_Audio_*.json file (extended export). */
 export interface RawPlay {
   ts: string
   platform: string | null
@@ -20,6 +28,17 @@ export interface RawPlay {
   offline: boolean | null
   incognito_mode: boolean | null
   episode_name?: string | null
+}
+
+/**
+ * One row from a StreamingHistory_music_*.json file (basic export). Four
+ * fields, and `endTime` is a UTC "YYYY-MM-DD HH:MM" string rather than ISO.
+ */
+export interface RawBasicPlay {
+  endTime: string
+  artistName: string | null
+  trackName: string | null
+  msPlayed: number
 }
 
 /**
@@ -58,8 +77,10 @@ export const ALL_FILTERS: PlayFilters = { years: null, platforms: null, excludeS
 
 export interface ParseMeta {
   years: number[]
+  /** Empty on the basic export, which records no device */
   platforms: string[]
   totalPlays: number
+  format: HistoryFormat
 }
 
 export interface TrackAgg {
