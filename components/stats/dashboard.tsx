@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { RotateCcw } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Check, FileArchive, RotateCcw, Upload } from 'lucide-react'
 import { useStats } from '@/components/providers/stats-provider'
 import { useCan3D } from '@/lib/use-preferences'
 import { DashboardSkeleton } from '@/components/stats/card-skeleton'
@@ -86,6 +88,60 @@ function Hero({ stats, onReset }: { stats: UnifiedStats; onReset: (() => void) |
     </div>
   )
 }
+
+/**
+ * The API only returns ranked top-50 lists plus the last 50 plays — no
+ * durations, no history. Half the cards below simply can't render from it, so
+ * say what the export adds rather than leaving connect mode looking thin.
+ */
+function ExportUpsell() {
+  return (
+    <Card className="gap-4 border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <FileArchive className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Want the full picture?</h2>
+          <p className="text-sm text-muted-foreground">
+            Spotify&rsquo;s API only hands out your top lists and last 50 plays, so some stats
+            can&rsquo;t be worked out here. Your data export carries every play you&rsquo;ve ever
+            made — drop the ZIP in and you also get:
+          </p>
+        </div>
+      </div>
+
+      <ul className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+        {EXPORT_ONLY.map((item) => (
+          <li key={item} className="flex items-start gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <Button asChild className="rounded-full">
+          <Link href="/upload">
+            <Upload className="h-4 w-4" /> Upload my export
+          </Link>
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Read in your browser · nothing is uploaded anywhere
+        </p>
+      </div>
+    </Card>
+  )
+}
+
+const EXPORT_ONLY = [
+  'Total hours and plays, all time',
+  'Skip rate, shuffle rate and weekday vs. weekend',
+  'Longest day streak and your record listening day',
+  'Year-by-year and month-by-month history',
+  'Your #1 artist for every single year',
+  'Which devices and countries you listened from',
+]
 
 export function StatsDashboard() {
   const { stats, status, retry, onReset, recomputing } = useStats()
@@ -284,6 +340,12 @@ export function StatsDashboard() {
               </Reveal>
             )}
           </div>
+        )}
+
+        {stats.source !== 'upload' && (
+          <Reveal>
+            <ExportUpsell />
+          </Reveal>
         )}
 
         <p className="pt-4 text-center text-xs text-muted-foreground">{stats.footnote}</p>

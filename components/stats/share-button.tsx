@@ -61,7 +61,9 @@ export function ShareButton({
       onClick={onClick}
       aria-label={label ?? 'Share as image'}
       className={cn(
-        'inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/60 text-muted-foreground opacity-0 backdrop-blur transition-all hover:border-primary hover:text-primary group-hover/card:opacity-100 focus-visible:opacity-100',
+        // Hover-to-reveal is a mouse affordance — on touch there is no hover, so
+        // the button has to stay visible or sharing is unreachable on mobile.
+        'inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card/60 text-muted-foreground opacity-0 backdrop-blur transition-all hover:border-primary hover:text-primary group-hover/card:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100',
         state !== 'idle' && 'opacity-100 border-primary text-primary',
         className,
       )}

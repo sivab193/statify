@@ -17,6 +17,7 @@ import type {
   EvolutionColumn,
   EvolutionEntry,
   HighlightData,
+  RecapData,
   TileData,
   UnifiedArtist,
   UnifiedStats,
@@ -141,6 +142,20 @@ function buildTiles(stats: LocalStats): TileData[] {
   ]
 }
 
+function buildRecap(stats: LocalStats): RecapData {
+  return {
+    caption: `${formatNumber(stats.totalPlays)} plays · ${formatNumber(
+      stats.distinctArtists,
+    )} artists`,
+    stats: [
+      { label: 'Top track', value: stats.topTracks[0]?.name ?? '—' },
+      { label: 'Peak hour', value: hourLabel(stats.peakHour) },
+      { label: 'Skip rate', value: formatPercent(stats.skipRate) },
+      { label: 'Day streak', value: `${stats.streak?.days ?? 0} days` },
+    ],
+  }
+}
+
 function buildHighlights(stats: LocalStats): HighlightData[] {
   const out: HighlightData[] = []
 
@@ -155,6 +170,8 @@ function buildHighlights(stats: LocalStats): HighlightData[] {
         stats.onRepeat.artist
       }`,
       shareValue: `${stats.onRepeat.plays}×`,
+      shareEyebrow: 'Most obsessed',
+      shareCaption: `in a single day · ${stats.onRepeat.artist}`,
     })
   }
   if (stats.streak) {
@@ -167,6 +184,8 @@ function buildHighlights(stats: LocalStats): HighlightData[] {
         stats.streak.end,
       )} without missing a day`,
       shareValue: `${stats.streak.days} days`,
+      shareEyebrow: 'Dedication',
+      shareCaption: `straight, without missing a day`,
     })
   }
   if (stats.recordDay) {
@@ -177,6 +196,7 @@ function buildHighlights(stats: LocalStats): HighlightData[] {
       title: formatMinutes(stats.recordDay.minutes),
       subtitle: `Your all-in day — ${formatDay(stats.recordDay.date)}`,
       shareValue: formatMinutes(stats.recordDay.minutes),
+      shareCaption: `in one day · ${formatDay(stats.recordDay.date)}`,
     })
   }
 
@@ -308,6 +328,7 @@ export function fromLocalStats(stats: LocalStats, scopeLabel: string): UnifiedSt
     },
 
     tiles: buildTiles(stats),
+    recap: buildRecap(stats),
     highlights: buildHighlights(stats),
     artists,
 

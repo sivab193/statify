@@ -12,13 +12,13 @@ export function recapSpec(stats: UnifiedStats): ShareSpec {
     eyebrow: `My Spotify · ${stats.scopeLabel}`,
     title: 'The Recap',
     bigValue: `${stats.hero.value}${stats.hero.suffix}`,
-    bigCaption: stats.hero.caption,
+    bigCaption: stats.recap.caption,
     rows: stats.artists.slice(0, 5).map((artist) => ({
       rank: artist.rank,
       primary: artist.name,
       value: artist.value,
     })),
-    stats: stats.tiles.slice(4, 8).map((tile) => ({ label: tile.label, value: tile.value })),
+    stats: stats.recap.stats,
   }
 }
 
@@ -35,10 +35,12 @@ export function tileSpec(tile: TileData, scopeLabel: string): ShareSpec {
 export function highlightSpec(highlight: HighlightData): ShareSpec {
   return {
     variant: 'tile',
-    eyebrow: highlight.eyebrow,
+    eyebrow: highlight.shareEyebrow ?? highlight.eyebrow,
     title: highlight.title,
     bigValue: highlight.shareValue,
-    bigCaption: highlight.subtitle,
+    // The in-page subtitle repeats the number that's already the big value —
+    // the card gets a caption written to sit under it instead.
+    bigCaption: highlight.shareCaption ?? highlight.subtitle,
   }
 }
 

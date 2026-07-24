@@ -95,6 +95,22 @@ export interface HighlightData {
   subtitle: string
   /** Big number on the shared image; falls back to the title */
   shareValue?: string
+  /** Punchier eyebrow for the image — the card eyebrow reads better in-page */
+  shareEyebrow?: string
+  /** Caption under the big number; falls back to `subtitle` */
+  shareCaption?: string
+}
+
+/**
+ * The story-format recap image. It gets its own copy rather than reusing the
+ * hero + first four tiles: the page can afford a long caption and eight tiles,
+ * the card can't, so each source hand-picks what reads best at poster size.
+ */
+export interface RecapData {
+  /** Short line under the big number — the hero caption is too long for the card */
+  caption: string
+  /** Exactly the four cells of the 2×2 grid at the bottom */
+  stats: { label: string; value: string }[]
 }
 
 export interface ClockData {
@@ -203,6 +219,7 @@ export interface UnifiedStats {
   scopeLabel: string
   hero: HeroData
   tiles: TileData[]
+  recap: RecapData
   highlights: HighlightData[]
   artists: UnifiedArtist[]
   tracks: UnifiedTrack[]

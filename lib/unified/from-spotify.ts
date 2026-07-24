@@ -18,6 +18,7 @@ import { TIME_RANGES, type StatsPayload, type TimeRange, type SpotifyArtistLite 
 import type {
   EvolutionColumn,
   HighlightData,
+  RecapData,
   StatsSource,
   TileData,
   UnifiedAlbum,
@@ -89,6 +90,30 @@ function deriveAlbums(payload: StatsPayload, range: TimeRange): UnifiedAlbum[] {
     }))
 }
 
+/**
+ * Same four recap slots as the export path, filled from what the API knows:
+ * it has no play counts or streaks, so genre and obscurity take those seats.
+ */
+function buildRecap(payload: StatsPayload, range: TimeRange): RecapData {
+  const artists = payload.artists[range]
+  const tracks = payload.tracks[range]
+  const genre = genreBreakdown(artists)
+  const meter = mainstreamMeter(tracks)
+  const clock = listeningClock(payload.recent)
+
+  return {
+    caption: `${formatNumber(tracks.length)} top tracks · ${formatNumber(
+      artists.length,
+    )} top artists`,
+    stats: [
+      { label: 'Top track', value: tracks[0]?.name ?? '—' },
+      { label: 'Peak hour', value: clock ? hourLabel(clock.peakHour) : '—' },
+      { label: 'Top genre', value: genre.topGenre ?? '—' },
+      { label: 'Obscurity', value: meter ? `${meter.obscurity}/100` : '—' },
+    ],
+  }
+}
+
 function buildHighlights(payload: StatsPayload): HighlightData[] {
   const out: HighlightData[] = []
   const { recent } = payload
@@ -110,6 +135,8 @@ function buildHighlights(payload: StatsPayload): HighlightData[] {
         title: champion.name,
         subtitle: `${champion.plays}× in your last ${recent.length} plays — ${champion.artist}`,
         shareValue: `${champion.plays}×`,
+        shareEyebrow: 'Most obsessed',
+        shareCaption: `in your last ${recent.length} plays · ${champion.artist}`,
       })
     }
   }
@@ -123,6 +150,8 @@ function buildHighlights(payload: StatsPayload): HighlightData[] {
       title: `${sessions.longestBinge.tracks} tracks straight`,
       subtitle: `${sessions.longestBinge.minutes} minutes without stepping away`,
       shareValue: `${sessions.longestBinge.tracks} tracks`,
+      shareEyebrow: 'Dedication',
+      shareCaption: `back to back · ${sessions.longestBinge.minutes} minutes straight`,
     })
   }
 
@@ -139,6 +168,7 @@ function buildHighlights(payload: StatsPayload): HighlightData[] {
         payload.artists.long_term.length
       }`,
       shareValue: `#${newest + 1}`,
+      shareCaption: `this month, nowhere all-time · ${artist.name}`,
     })
   }
 
@@ -351,6 +381,7 @@ export function fromSpotifyStats(
     },
 
     tiles: buildTiles(payload, range, albums.length),
+    recap: buildRecap(payload, range),
     highlights: buildHighlights(payload),
     artists: rangeArtists.map(toArtist),
 
