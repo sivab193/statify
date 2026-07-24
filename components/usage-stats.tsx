@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Eye, Zap, UploadCloud } from 'lucide-react'
-import { useCountUp } from '@/lib/streaming-history/use-count-up'
+import { useCountUp } from '@/lib/use-count-up'
 import type { LucideIcon } from 'lucide-react'
 
 interface Counts {

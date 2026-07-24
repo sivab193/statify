@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Share2, Check, Loader2 } from 'lucide-react'
-import { shareCard, type ShareSpec } from '@/lib/streaming-history/share'
+import { shareCard, type ShareSpec } from '@/lib/share-card'
 import { cn } from '@/lib/utils'
 
 export function ShareButton({

@@ -13,11 +13,18 @@ import type {
   Play,
   PlayFilters,
   RawPlay,
+  RideOrDie,
   TrackAgg,
 } from './types'
 
 /** Below this, a play reads as a skip regardless of the `skipped` flag. */
 const SKIP_MS = 30_000
+
+/** A quiet stretch longer than this ends a listening session. */
+const SESSION_GAP_MS = 30 * 60_000
+
+/** How deep into each year's artist chart a "ride or die" has to stay. */
+const LOYALTY_DEPTH = 20
 
 function peakHourPersona(hour: number): string {
   if (hour >= 22 || hour < 5) return 'Night Owl'
@@ -83,6 +90,10 @@ export function normalize(rows: RawPlay[]): { plays: Play[]; meta: ParseMeta } {
     })
   }
 
+  // Chronological once, here, so every later pass (sessions, streaks) can
+  // assume order without re-sorting on each filter change.
+  plays.sort((a, b) => a.t - b.t)
+
   return {
     plays,
     meta: {
@@ -109,7 +120,7 @@ export function aggregate(
   filters: PlayFilters = { years: null, platforms: null, excludeSkips: false },
 ): LocalStats {
   const tracks = new Map<string, TrackAgg>()
-  const artists = new Map<string, ArtistAgg & { _tracks: Set<string>; _firstYear: number }>()
+  const artists = new Map<string, ArtistAgg & { _tracks: Set<string> }>()
   const albums = new Map<string, AlbumAgg>()
   const years = new Map<number, { minutes: number; plays: number }>()
   const months = new Map<string, number>()
@@ -133,10 +144,34 @@ export function aggregate(
   let lastTs = -Infinity
   let firstEver: LocalStats['firstEver'] = null
 
+  // Sessions — `plays` arrives chronological from normalize()
+  let sessionCount = 0
+  let sessionTracks = 0
+  let sessionMs = 0
+  let longestTracks = 0
+  let longestMs = 0
+  let prevTs = -Infinity
+  const closeSession = () => {
+    if (sessionTracks > longestTracks) {
+      longestTracks = sessionTracks
+      longestMs = sessionMs
+    }
+  }
+
   for (const p of plays) {
     if (!matches(p, filters)) continue
     const { ms } = p
     const minutes = ms / 60_000
+
+    if (p.t - prevTs > SESSION_GAP_MS) {
+      closeSession()
+      sessionCount++
+      sessionTracks = 0
+      sessionMs = 0
+    }
+    prevTs = p.t
+    sessionTracks++
+    sessionMs += ms
 
     totalPlays++
     totalMs += ms
@@ -173,15 +208,15 @@ export function aggregate(
       artist.ms += ms
       artist.plays++
       artist._tracks.add(p.uri)
-      if (p.year < artist._firstYear) artist._firstYear = p.year
+      if (p.year < artist.firstYear) artist.firstYear = p.year
     } else {
       artists.set(p.artist, {
         name: p.artist,
         ms,
         plays: 1,
         distinctTracks: 0,
+        firstYear: p.year,
         _tracks: new Set([p.uri]),
-        _firstYear: p.year,
       })
     }
 
@@ -244,9 +279,21 @@ export function aggregate(
     }
   }
 
+  closeSession()
   for (const artist of artists.values()) artist.distinctTracks = artist._tracks.size
 
   const peakHour = clock.reduce((max, b) => (b.minutes > max.minutes ? b : max), clock[0]).hour
+
+  // Artist diversity: normalized Shannon entropy over listening time, so it
+  // reads on the same 0–100 scale as the genre diversity on the API path.
+  let artistDiversity = 0
+  if (artists.size > 1 && totalMs > 0) {
+    const entropy = -[...artists.values()].reduce((sum, a) => {
+      const share = a.ms / totalMs
+      return share > 0 ? sum + share * Math.log(share) : sum
+    }, 0)
+    artistDiversity = Math.round((entropy / Math.log(artists.size)) * 100)
+  }
 
   // Record day + on-repeat champion
   let recordDay: LocalStats['recordDay'] = null
@@ -275,10 +322,45 @@ export function aggregate(
     .sort((a, b) => a.year - b.year)
     .map((a) => ({ ...a, minutes: Math.round(a.minutes) }))
 
+  // Yearly artist charts: who stayed near the top, and who owns "now"
+  const byYearArtists = new Map<number, ArtistYear[]>()
+  for (const ay of artistYear.values()) {
+    const list = byYearArtists.get(ay.year)
+    if (list) list.push(ay)
+    else byYearArtists.set(ay.year, [ay])
+  }
+  const chartYears = [...byYearArtists.keys()].sort((a, b) => a - b)
+  const topTwentyCounts = new Map<string, number>()
+  for (const year of chartYears) {
+    const chart = byYearArtists
+      .get(year)!
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, LOYALTY_DEPTH)
+    for (const entry of chart) {
+      topTwentyCounts.set(entry.artist, (topTwentyCounts.get(entry.artist) ?? 0) + 1)
+    }
+  }
+  const rideOrDie: RideOrDie[] = [...topTwentyCounts.entries()]
+    .filter(([, years]) => chartYears.length > 1 && years >= Math.ceil(chartYears.length * 0.6))
+    .map(([name, years]) => ({ name, years }))
+    .sort((a, b) => b.years - a.years)
+    .slice(0, 12)
+
+  const recentYear = chartYears.length ? chartYears[chartYears.length - 1] : null
+  const topArtistsRecent =
+    recentYear === null
+      ? []
+      : byYearArtists
+          .get(recentYear)!
+          .slice()
+          .sort((a, b) => b.minutes - a.minutes)
+          .slice(0, 20)
+          .map((a) => ({ ...a, minutes: Math.round(a.minutes) }))
+
   // Discovery: new artists first heard each year
   const discoveryMap = new Map<number, number>()
   for (const artist of artists.values()) {
-    discoveryMap.set(artist._firstYear, (discoveryMap.get(artist._firstYear) ?? 0) + 1)
+    discoveryMap.set(artist.firstYear, (discoveryMap.get(artist.firstYear) ?? 0) + 1)
   }
   const discovery = [...discoveryMap.entries()]
     .sort(([a], [b]) => a - b)
@@ -334,7 +416,7 @@ export function aggregate(
     peakHour,
     peakHourPersona: peakHourPersona(peakHour),
     topTracks: topBy(tracks, 30),
-    topArtists: topBy(artists, 30).map(({ _tracks, _firstYear, ...a }) => a),
+    topArtists: topBy(artists, 30).map(({ _tracks, ...a }) => a),
     topAlbums: topBy(albums, 20),
     byYear: [...years.entries()]
       .sort(([a], [b]) => a - b)
@@ -362,5 +444,26 @@ export function aggregate(
     streak,
     onRepeat,
     firstEver,
+    sessions: sessionCount
+      ? {
+          count: sessionCount,
+          avgMinutes: Math.round(totalMinutes / sessionCount),
+          avgTracks: Math.max(1, Math.round(totalPlays / sessionCount)),
+          longestTracks,
+          longestMinutes: Math.round(longestMs / 60_000),
+        }
+      : null,
+    recentYear,
+    topArtistsRecent,
+    rideOrDie,
+    loyaltyScore: chartYears.length
+      ? Math.round(
+          (rideOrDie.reduce((sum, r) => sum + r.years, 0) /
+            Math.max(1, rideOrDie.length * chartYears.length)) *
+            100,
+        )
+      : 0,
+    artistDiversity,
+    activeYears: chartYears.length,
   }
 }

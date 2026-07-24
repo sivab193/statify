@@ -1,53 +1,29 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { UploadDropzone } from '@/components/upload/upload-dropzone'
-import { LocalStatsView } from '@/components/upload/local-stats-view'
-import { FilterBar } from '@/components/upload/filter-bar'
-import { aggregate } from '@/lib/streaming-history/aggregate'
-import { ALL_FILTERS, type ParseMeta, type Play, type PlayFilters } from '@/lib/streaming-history/types'
+import { LocalStatsProvider } from '@/components/providers/stats-provider'
+import { StatsShell } from '@/components/stats/shell'
+import { StatsDashboard } from '@/components/stats/dashboard'
+import { UsageStats } from '@/components/usage-stats'
+import { SiteFooter } from '@/components/site-footer'
+import type { ParseMeta, Play } from '@/lib/streaming-history/types'
 import { ArrowLeft, Clock, Sparkles } from 'lucide-react'
 import { LogoMark } from '@/components/brand/logo'
 
-function scopeLabelFor(filters: PlayFilters, meta: ParseMeta): string {
-  if (filters.years && filters.years.length) {
-    const sorted = [...filters.years].sort((a, b) => a - b)
-    return sorted.length === 1 ? `${sorted[0]}` : `${sorted[0]}–${sorted[sorted.length - 1]}`
-  }
-  return 'All time'
-}
-
 export default function UploadPage() {
   const [data, setData] = useState<{ plays: Play[]; meta: ParseMeta } | null>(null)
-  const [filters, setFilters] = useState<PlayFilters>(ALL_FILTERS)
-  const [pending, startTransition] = useTransition()
+  const reset = useCallback(() => setData(null), [])
 
-  const stats = useMemo(
-    () => (data ? aggregate(data.plays, filters) : null),
-    [data, filters],
-  )
-
-  const onFilterChange = (next: PlayFilters) => {
-    startTransition(() => setFilters(next))
-  }
-
-  if (data && stats) {
+  if (data) {
     return (
-      <main className="min-h-screen bg-background">
-        <FilterBar meta={data.meta} filters={filters} onChange={onFilterChange} pending={pending} />
-        <div className={pending ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <LocalStatsView
-            stats={stats}
-            scopeLabel={scopeLabelFor(filters, data.meta)}
-            onReset={() => {
-              setData(null)
-              setFilters(ALL_FILTERS)
-            }}
-          />
-        </div>
-      </main>
+      <LocalStatsProvider plays={data.plays} meta={data.meta} onReset={reset}>
+        <StatsShell>
+          <StatsDashboard />
+        </StatsShell>
+      </LocalStatsProvider>
     )
   }
 
@@ -141,7 +117,14 @@ export default function UploadPage() {
             </Link>
           </Button>
         </div>
+
+        {/* Usage stats */}
+        <div className="flex justify-center">
+          <UsageStats />
+        </div>
       </div>
+
+      <SiteFooter />
     </main>
   )
 }

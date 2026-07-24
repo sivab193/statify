@@ -1,4 +1,4 @@
-// Display helpers for the upload dashboard.
+// Display helpers shared by every stats source.
 
 export function formatHours(ms: number): string {
   const hours = ms / 3_600_000
@@ -18,6 +18,10 @@ export function formatMinutes(minutes: number): string {
 
 export function formatNumber(n: number): string {
   return n.toLocaleString()
+}
+
+export function plural(n: number, noun: string): string {
+  return `${formatNumber(n)} ${noun}${n === 1 ? '' : 's'}`
 }
 
 export function formatPercent(fraction: number): string {

@@ -1,11 +1,27 @@
 # Statify — Your Spotify, in 3D
 
-Turn your Spotify listening into an explorable universe: a **Genre Galaxy** of your
+Turn your Spotify listening into an explorable universe: an **Artist Galaxy** of your
 top artists as orbiting planets, a cover-flow **Album Wall**, and insight cards Spotify
 never shows you — plus an **in-browser data-export mode** that computes your all-time
 recap with no login at all.
 
 **Live at [sst.siv19.dev](https://sst.siv19.dev)** · try it without an account at `/demo`.
+
+## One dashboard, three sources
+
+Sign-in, demo, and ZIP-export mode all render the **same dashboard**: the same 3D scenes,
+the same card layout, and a share-as-image button on every card. Each source fills the
+common view model (`lib/unified/`) with what it can answer, and cards it can't answer
+simply don't appear — the API knows genres, popularity and artwork; the export knows
+every play you ever made.
+
+| | Sign in / Demo | ZIP export |
+|---|---|---|
+| Artist Galaxy rings | by genre | by the year you discovered the artist |
+| Album Wall covers | real artwork | generated sleeves (drawn locally) |
+| Top artists / tracks / albums, Listening Clock, Session Patterns, Taste Evolution, Ride or Die, DNA + meter card, highlights, sharing | ✅ | ✅ |
+| Genre DNA · Mainstream Meter · Era Explorer · Underground Finds | ✅ | — |
+| Total hours · streaks · record day · yearly & monthly trends · seasons · devices · countries · Artist DNA · Obsession Meter · Repeat Offenders | — | ✅ |
 
 ## Two ways in
 
@@ -29,10 +45,10 @@ This is richer than the API exposes (all-time, every play), and every stat is sh
 > Getting the export: **spotify.com/account/privacy → Download your data → Extended
 > streaming history.** Spotify says up to 30 days, but it often arrives in a few hours.
 
-## Live-mode features
+## Feature highlights
 
-- **Genre Galaxy** — top 20 artists as image-textured planets clustered into orbital rings by genre (three.js / react-three-fiber). Drag to explore, click a planet for details.
-- **Album Wall** — cover-flow of your top tracks with floor reflections; arrow keys to browse.
+- **Artist Galaxy** — top 20 artists as image-textured planets clustered into orbital rings (three.js / react-three-fiber). Drag to explore, click a planet for details.
+- **Album Wall** — cover-flow of your top albums with floor reflections; arrow keys to browse.
 - **Insights Spotify hides**: Mainstream Meter (obscurity), Era Explorer (decade histogram),
   Listening Clock, Taste Evolution, Genre DNA (Shannon-entropy diversity), Ride or Die,
   Session Patterns, Underground Finds.
@@ -65,8 +81,9 @@ stay hidden — no fake numbers, no errors. See `lib/counter.ts`.
 ## Architecture notes
 
 - **OAuth**: authorization code + PKCE, built server-side (`app/api/auth/login`) with a `state` CSRF check; tokens live in httpOnly cookies; `lib/session.ts#getValidAccessToken` transparently refreshes and persists.
-- **Live data**: one aggregate route (`app/api/spotify/stats`) fans out 7 Spotify calls (top artists/tracks × 3 ranges + recently played) and returns a slim payload; `StatsProvider` fetches it once and serves every card.
-- **Upload data**: a Web Worker (`lib/streaming-history/worker.ts`) unzips (fflate) and normalizes plays off-thread; the main thread re-aggregates on every filter change via `aggregate()` (`lib/streaming-history/aggregate.ts`). Share cards are drawn on a canvas (`lib/streaming-history/share.ts`) so the app's oklch theme never breaks the PNG export.
-- **Insights**: pure functions in `lib/insights.ts` (live) and `lib/streaming-history/aggregate.ts` (upload), computed client-side.
+- **One view model**: `lib/unified/types.ts` describes every card the dashboard can draw; `from-spotify.ts` and `from-local.ts` adapt each source into it, leaving unanswerable sections `null`. `components/stats/*` renders that model and nothing else, so both paths get the same cards, layout and share buttons for free.
+- **Live data**: one aggregate route (`app/api/spotify/stats`) fans out 7 Spotify calls (top artists/tracks × 3 ranges + recently played) and returns a slim payload; `RemoteStatsProvider` fetches it once and serves every card.
+- **Upload data**: a Web Worker (`lib/streaming-history/worker.ts`) unzips (fflate) and normalizes plays off-thread; `LocalStatsProvider` re-aggregates on every filter change via `aggregate()` (`lib/streaming-history/aggregate.ts`). Share cards are drawn on a canvas (`lib/share-card.ts`) so the app's oklch theme never breaks the PNG export.
+- **Insights**: pure functions in `lib/insights.ts` (API payloads) and `lib/streaming-history/aggregate.ts` (exports), computed client-side.
 - **3D**: `components/three/*`, dynamically imported with `ssr: false`, with adaptive DPR and a performance monitor that drops reflections under load.
 - **Brand**: logo mark in `components/brand/logo.tsx` / `public/icon.svg`.

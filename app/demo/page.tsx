@@ -1,6 +1,6 @@
-import { StatsProvider } from '@/components/providers/stats-provider'
-import { DashboardShell } from '@/components/dashboard/shell'
-import { DashboardContent } from '@/components/dashboard/dashboard-content'
+import { RemoteStatsProvider } from '@/components/providers/stats-provider'
+import { StatsShell } from '@/components/stats/shell'
+import { StatsDashboard } from '@/components/stats/dashboard'
 
 export const metadata = {
   title: 'Statify — Demo',
@@ -8,10 +8,10 @@ export const metadata = {
 
 export default function DemoPage() {
   return (
-    <StatsProvider mode="demo">
-      <DashboardShell>
-        <DashboardContent />
-      </DashboardShell>
-    </StatsProvider>
+    <RemoteStatsProvider mode="demo">
+      <StatsShell>
+        <StatsDashboard />
+      </StatsShell>
+    </RemoteStatsProvider>
   )
 }

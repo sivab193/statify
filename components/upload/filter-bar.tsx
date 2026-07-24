@@ -64,7 +64,7 @@ export function FilterBar({
   const dirty = filters.years !== null || filters.platforms !== null || filters.excludeSkips
 
   return (
-    <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-xl">
+    <div className="border-t border-border/60 bg-background/60 px-4 py-3">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
         <span className="mr-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <SlidersHorizontal className={cn('h-3.5 w-3.5 text-primary', pending && 'animate-pulse')} />

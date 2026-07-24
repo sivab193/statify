@@ -77,6 +77,8 @@ export interface ArtistAgg {
   ms: number
   plays: number
   distinctTracks: number
+  /** First year this artist appears in the filtered history */
+  firstYear: number
 }
 
 export interface AlbumAgg {
@@ -148,6 +150,21 @@ export interface OnRepeat {
   plays: number
 }
 
+/** Listening broken into sittings — a gap over 30 minutes starts a new one. */
+export interface SessionAgg {
+  count: number
+  avgMinutes: number
+  avgTracks: number
+  longestTracks: number
+  longestMinutes: number
+}
+
+/** Artists that keep showing up in the yearly top 20. */
+export interface RideOrDie {
+  name: string
+  years: number
+}
+
 /** Everything the upload dashboard renders — recomputed on every filter change. */
 export interface LocalStats {
   generatedAt: string
@@ -184,6 +201,18 @@ export interface LocalStats {
   streak: Streak | null
   onRepeat: OnRepeat | null
   firstEver: { track: string; artist: string; ts: string } | null
+  sessions: SessionAgg | null
+  /** Most recent year in scope — the "now" side of taste evolution */
+  recentYear: number | null
+  /** Top artists of `recentYear`, for comparison against the all-time list */
+  topArtistsRecent: ArtistYear[]
+  rideOrDie: RideOrDie[]
+  /** Share of active years in which a ride-or-die artist held a top-20 spot */
+  loyaltyScore: number
+  /** Normalized Shannon entropy over artist listening time, 0–100 */
+  artistDiversity: number
+  /** Number of years with any listening — how meaningful the yearly views are */
+  activeYears: number
 }
 
 export type WorkerRequest = {

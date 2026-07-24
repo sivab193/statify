@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { COOKIE_ACCESS, COOKIE_REFRESH } from '@/lib/session'
-import { StatsProvider } from '@/components/providers/stats-provider'
-import { DashboardShell } from '@/components/dashboard/shell'
-import { DashboardContent } from '@/components/dashboard/dashboard-content'
+import { RemoteStatsProvider } from '@/components/providers/stats-provider'
+import { StatsShell } from '@/components/stats/shell'
+import { StatsDashboard } from '@/components/stats/dashboard'
 
 export default async function DashboardPage() {
   const store = await cookies()
@@ -12,10 +12,10 @@ export default async function DashboardPage() {
   }
 
   return (
-    <StatsProvider mode="live">
-      <DashboardShell>
-        <DashboardContent />
-      </DashboardShell>
-    </StatsProvider>
+    <RemoteStatsProvider mode="live">
+      <StatsShell>
+        <StatsDashboard />
+      </StatsShell>
+    </RemoteStatsProvider>
   )
 }

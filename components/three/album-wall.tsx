@@ -8,10 +8,10 @@ import type { Group } from 'three'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { SceneCanvas, useImageTexture } from './scene-canvas'
+import { SceneCanvas, useCoverTexture } from './scene-canvas'
 import { useStats } from '@/components/providers/stats-provider'
 import { useCan3D, useReducedMotion } from '@/lib/use-preferences'
-import type { SpotifyTrackLite } from '@/lib/types'
+import type { UnifiedAlbum } from '@/lib/unified/types'
 
 const COVER_COUNT = 12
 const SPACING = 1.2
@@ -19,17 +19,17 @@ const SIDE_GAP = 0.55
 const SIDE_TILT = 1.0
 
 function Cover({
-  track,
+  album,
   index,
   focusIndex,
   onFocus,
 }: {
-  track: SpotifyTrackLite
+  album: UnifiedAlbum
   index: number
   focusIndex: number
   onFocus: (index: number) => void
 }) {
-  const texture = useImageTexture(track.albumImageUrl)
+  const texture = useCoverTexture(album.imageUrl, album.name, album.artist)
   const group = useRef<Group>(null)
   const reducedMotion = useReducedMotion()
   const focused = index === focusIndex
@@ -62,8 +62,8 @@ function Cover({
       <mesh
         onClick={(e) => {
           e.stopPropagation()
-          if (focused) {
-            window.open(track.spotifyUrl, '_blank', 'noopener')
+          if (focused && album.url) {
+            window.open(album.url, '_blank', 'noopener')
           } else {
             onFocus(index)
           }
@@ -86,11 +86,11 @@ function Cover({
 }
 
 function WallScene({
-  tracks,
+  albums,
   focusIndex,
   onFocus,
 }: {
-  tracks: SpotifyTrackLite[]
+  albums: UnifiedAlbum[]
   focusIndex: number
   onFocus: (index: number) => void
 }) {
@@ -101,8 +101,8 @@ function WallScene({
       <ambientLight intensity={1.4} />
       <pointLight position={[0, 4, 4]} intensity={50} />
       <group position={[0, 0.1, 0]}>
-        {tracks.map((track, i) => (
-          <Cover key={track.id} track={track} index={i} focusIndex={focusIndex} onFocus={onFocus} />
+        {albums.map((album, i) => (
+          <Cover key={album.key} album={album} index={i} focusIndex={focusIndex} onFocus={onFocus} />
         ))}
       </group>
       {reflections && (
@@ -128,21 +128,17 @@ function WallScene({
 }
 
 export default function AlbumWall() {
-  const { tracks } = useStats()
+  const { stats } = useStats()
   const can3D = useCan3D()
-  const covers = useMemo(() => {
-    // Prefer covers with actual artwork; pad with the rest if scarce
-    const withArt = tracks.filter((t) => t.albumImageUrl)
-    const pool = withArt.length >= 5 ? withArt : tracks
-    return pool.slice(0, COVER_COUNT)
-  }, [tracks])
+  const albums = stats?.albums
+  const covers = useMemo(() => (albums ?? []).slice(0, COVER_COUNT), [albums])
   const [focusIndex, setFocusIndex] = useState(0)
 
   const move = useCallback(
     (delta: number) => {
       setFocusIndex((i) => Math.min(Math.max(i + delta, 0), covers.length - 1))
     },
-    [covers.length]
+    [covers.length],
   )
 
   useEffect(() => {
@@ -155,7 +151,7 @@ export default function AlbumWall() {
   }, [move])
 
   useEffect(() => {
-    // Reset when the time range swaps the track list
+    // Reset when a scope change swaps the album list
     setFocusIndex(0)
   }, [covers])
 
@@ -163,21 +159,24 @@ export default function AlbumWall() {
   const focused = covers[Math.min(focusIndex, covers.length - 1)]
 
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="space-y-4 p-6">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Album Wall</h2>
         <p className="text-xs text-muted-foreground">
-          Your top tracks as a cover-flow — arrow keys or the buttons to browse, click the front
-          cover to open it in Spotify
+          Your top albums as a cover-flow — arrow keys or the buttons to browse
+          {focused.url ? ', click the front cover to open it in Spotify' : ''}
         </p>
       </div>
 
       <div className="relative">
-        <SceneCanvas className="h-[340px] rounded-lg overflow-hidden bg-background/60" camera={{ position: [0, 0.4, 4.4], fov: 45 }}>
-          <WallScene tracks={covers} focusIndex={focusIndex} onFocus={setFocusIndex} />
+        <SceneCanvas
+          className="h-[340px] overflow-hidden rounded-lg bg-background/60"
+          camera={{ position: [0, 0.4, 4.4], fov: 45 }}
+        >
+          <WallScene albums={covers} focusIndex={focusIndex} onFocus={setFocusIndex} />
         </SceneCanvas>
 
-        <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-4">
+        <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-4">
           <Button
             size="icon"
             variant="outline"
@@ -185,12 +184,12 @@ export default function AlbumWall() {
             disabled={focusIndex === 0}
             aria-label="Previous album"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="text-center min-w-48">
+          <div className="min-w-48 text-center">
             <p className="text-sm font-medium leading-tight">{focused.name}</p>
             <p className="text-xs text-muted-foreground">
-              {focused.artists.join(', ')} · {focused.albumName}
+              {focused.artist} · {focused.value}
             </p>
           </div>
           <Button
@@ -200,7 +199,7 @@ export default function AlbumWall() {
             disabled={focusIndex === covers.length - 1}
             aria-label="Next album"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
