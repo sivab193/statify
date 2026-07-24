@@ -88,8 +88,8 @@ export function AuthContent() {
 
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Want to try it with your own account? DM{' '}
-                <span className="font-medium text-foreground">@siv19.dev</span> on Instagram and
-                you&apos;ll be added to the allowlist.
+                <span className="font-medium text-foreground">@siv19.dev</span>
+                {' on Instagram and you’ll be added to the allowlist.'}
               </p>
 
               <Button asChild className="w-full gap-2" size="lg">
