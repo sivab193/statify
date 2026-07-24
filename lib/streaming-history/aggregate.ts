@@ -308,20 +308,25 @@ export function aggregate(
     const tdKey = `${p.uri}|${p.day}`
     trackDay.set(tdKey, (trackDay.get(tdKey) ?? 0) + 1)
 
-    // Categorical
-    const pf = platforms.get(p.platform)
-    if (pf) {
-      pf.minutes += minutes
-      pf.plays++
-    } else {
-      platforms.set(p.platform, { label: p.platform, minutes, plays: 1 })
+    // Categorical. The basic export records neither, leaving these blank — an
+    // empty label would otherwise become one nameless row holding everything.
+    if (p.platform) {
+      const pf = platforms.get(p.platform)
+      if (pf) {
+        pf.minutes += minutes
+        pf.plays++
+      } else {
+        platforms.set(p.platform, { label: p.platform, minutes, plays: 1 })
+      }
     }
-    const c = countries.get(p.country)
-    if (c) {
-      c.minutes += minutes
-      c.plays++
-    } else {
-      countries.set(p.country, { label: p.country, minutes, plays: 1 })
+    if (p.country) {
+      const c = countries.get(p.country)
+      if (c) {
+        c.minutes += minutes
+        c.plays++
+      } else {
+        countries.set(p.country, { label: p.country, minutes, plays: 1 })
+      }
     }
   }
 
