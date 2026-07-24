@@ -234,13 +234,21 @@ export function renderCard(spec: ShareSpec): HTMLCanvasElement {
     grad.addColorStop(1, GREEN)
     ctx.fillStyle = grad
     ctx.textAlign = 'left'
-    ctx.fillText(spec.bigValue, 48, y + px * 0.8)
-    y += px * 0.8 + 20
+    const baseline = y + px * 0.8
+    ctx.fillText(spec.bigValue, 48, baseline)
+    // Descenders hang below the baseline, and at 150px+ they hang a long way —
+    // a fixed gap put the caption straight through the "p" in "Tame Impala".
+    // Measure the actual ink instead of assuming the value is digits.
+    const descent = ctx.measureText(spec.bigValue).actualBoundingBoxDescent || 0
+    y = baseline + descent
     if (spec.bigCaption) {
+      const captionBaseline = y + 52
       ctx.font = `600 40px ${FONT}`
       ctx.fillStyle = MUTED
-      ctx.fillText(truncate(ctx, spec.bigCaption, W - 96), 48, y + 20)
-      y += 70
+      ctx.fillText(truncate(ctx, spec.bigCaption, W - 96), 48, captionBaseline)
+      y = captionBaseline + 30
+    } else {
+      y += 20
     }
   }
 
